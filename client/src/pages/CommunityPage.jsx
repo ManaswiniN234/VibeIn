@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,164 +9,313 @@ import {
   Star,
   MessageCircle,
   Share,
-  Heart,
   ExternalLink,
   Image,
   Send,
   MoreHorizontal,
+  Trash,
+  Edit,
 } from "lucide-react";
+import { communityAPI, authAPI } from "../services/api";
 
 function CommunityPage({ user }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const [isJoined, setIsJoined] = useState(false);
+  const [copyNotification, setCopyNotification] = useState(false);
   const [newReview, setNewReview] = useState("");
   const [rating, setRating] = useState(5);
+  const [community, setCommunity] = useState(null);
+  const [similarCommunities, setSimilarCommunities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Dummy community data based on ID
-  const communityData = {
-    1: {
-      name: "Tech Enthusiasts LA",
-      description:
-        "A vibrant community of tech lovers, developers, and innovators in Los Angeles. We organize weekly meetups, hackathons, and networking events. Whether you're a beginner or an expert, everyone is welcome!",
-      category: "Technology",
-      members: 1247,
-      banner:
-        "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800&h=300&fit=crop",
-      profilePicture:
-        "https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      groupLink: "https://chat.whatsapp.com/tech-enthusiasts-la",
-      nextHangout: "Hackathon - Dec 15, 2024 at UCLA Campus",
-      tags: ["Programming", "AI", "Startups", "Networking"],
-      rating: 4.8,
-      totalReviews: 156,
-    },
-    2: {
-      name: "Photography Club",
-      description:
-        "Capture moments, share techniques, and explore LA together. From street photography to portraits, we cover all genres. Join us for photo walks, workshops, and exhibitions.",
-      category: "Arts",
-      members: 892,
-      banner:
-        "https://images.pexels.com/photos/1983032/pexels-photo-1983032.jpeg?auto=compress&cs=tinysrgb&w=800&h=300&fit=crop",
-      profilePicture:
-        "https://images.pexels.com/photos/606541/pexels-photo-606541.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      groupLink: "https://t.me/photography_club_la",
-      nextHangout: "Photo Walk - Dec 12, 2024 at Venice Beach",
-      tags: ["Portrait", "Street Photography", "Editing"],
-      rating: 4.9,
-      totalReviews: 89,
-    },
+  // Fetch community data
+  useEffect(() => {
+    const fetchCommunity = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        setIsJoined(false); // Reset join status when fetching new community
+        const response = await communityAPI.getCommunity(id);
+        
+        if (response.success) {
+          setCommunity(response.community);
+          // Check if user is already a member (compare IDs as strings)
+          if (response.community.members?.some(memberId => memberId === user?.id)) {
+            setIsJoined(true);
+          }
+        } else {
+          setError(response.message || "Failed to load community");
+        }
+      } catch (err) {
+        console.error("Error fetching community:", err);
+        setError("An error occurred while loading the community");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCommunity();
+  }, [id, user?.id]);
+
+
+
+  // Fetch similar communities
+  useEffect(() => {
+    const fetchSimilarCommunities = async () => {
+      try {
+        const response = await communityAPI.getSimilarCommunities(id, 3);
+        if (response.success) {
+          setSimilarCommunities(response.communities || []);
+        }
+      } catch (err) {
+        console.error("Error fetching similar communities:", err);
+      }
+    };
+
+    if (id) {
+      fetchSimilarCommunities();
+    }
+  }, [id]);
+
+  const handleJoinCommunity = async () => {
+    try {
+      const response = await communityAPI.joinCommunity(id);
+      if (response.success) {
+        setIsJoined(true);
+        setCommunity(response.community);
+      } else {
+        console.error("Join community failed:", response.message);
+        setError(response.message || "Failed to join community");
+      }
+    } catch (err) {
+      console.error("Error joining community:", err);
+      setError("An error occurred while joining the community");
+    }
   };
 
-  const community = communityData[id] || communityData[1];
-
-  const galleryImages = [
-    "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-    "https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-    "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-    "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-    "https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-    "https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-  ];
-
-  const reviews = [
-    {
-      id: 1,
-      user: "Sarah Chen",
-      avatar:
-        "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
-      rating: 5,
-      comment:
-        "Amazing community! I've learned so much and made great friends. The events are well-organized and everyone is super welcoming.",
-      date: "2 days ago",
-    },
-    {
-      id: 2,
-      user: "Marcus Johnson",
-      avatar:
-        "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
-      rating: 5,
-      comment:
-        "Great place to network and collaborate on projects. The hackathons are intense but so much fun!",
-      date: "1 week ago",
-    },
-    {
-      id: 3,
-      user: "Emma Rodriguez",
-      avatar:
-        "https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=50&h=50&fit=crop",
-      rating: 4,
-      comment:
-        "Love the diversity of topics covered. From beginner workshops to advanced discussions, there's something for everyone.",
-      date: "2 weeks ago",
-    },
-  ];
-
-  const handleJoinCommunity = () => {
-    setIsJoined(!isJoined);
+  const handleLeaveCommunity = async () => {
+    if (!window.confirm("Are you sure you want to leave this community?")) {
+      return;
+    }
+    try {
+      const response = await communityAPI.leaveCommunity(id);
+      if (response.success) {
+        setIsJoined(false);
+        setCommunity(response.community);
+      } else {
+        console.error("Leave community failed:", response.message);
+        setError(response.message || "Failed to leave community");
+      }
+    } catch (err) {
+      console.error("Error leaving community:", err);
+      setError("An error occurred while leaving the community");
+    }
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    // Simulate review submission
-    console.log("Submitting review:", { rating, comment: newReview });
-    setNewReview("");
-    setRating(5);
+    setSubmittingReview(true);
+    try {
+      const response = await communityAPI.addReview(id, rating, newReview);
+      if (response.success) {
+        // Update community with the new review
+        setCommunity(response.community);
+        setNewReview("");
+        setRating(5);
+      } else {
+        console.error("Error submitting review:", response.message);
+        setError(response.message || "Failed to submit review");
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      setError("An error occurred while submitting your review");
+    } finally {
+      setSubmittingReview(false);
+    }
   };
+
+  const handleCopyLink = async () => {
+    const link = `${window.location.origin}/community/${id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopyNotification(true);
+      setTimeout(() => setCopyNotification(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+    }
+  };
+
+
+
+  const handleDeleteCommunity = async () => {
+    if (!window.confirm('Are you sure you want to delete this community? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await communityAPI.deleteCommunity(id);
+      if (response.success) {
+        navigate("/home");
+      } else {
+        setError(response.message || "Failed to delete community");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error deleting community:", err);
+      setError("An error occurred while deleting the community");
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='inline-block'>
+            <div className='w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin'></div>
+          </div>
+          <p className='text-gray-600 mt-4'>Loading community...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !community) {
+    return (
+      <div className='min-h-screen bg-gray-50'>
+        <header className='bg-white shadow-sm border-b border-gray-200'>
+          <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
+            <button
+              onClick={() => navigate("/home")}
+              className='flex items-center space-x-2 text-gray-600 hover:text-purple-600'
+            >
+              <ArrowLeft className='w-5 h-5' />
+              <span>Back to Communities</span>
+            </button>
+          </div>
+        </header>
+        <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
+          <div className='bg-red-50 border border-red-200 rounded-lg p-6 text-center'>
+            <p className='text-red-700 font-medium mb-4'>{error || "Community not found"}</p>
+            <button
+              onClick={() => navigate("/home")}
+              className='text-red-600 hover:text-red-700 font-medium'
+            >
+              Go back to communities
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-gray-50'>
       {/* Header */}
       <header className='bg-white shadow-sm border-b border-gray-200'>
         <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-          <div className='flex items-center justify-between py-4'>
+          <div className='flex items-center justify-between py-4 gap-2'>
             <button
               onClick={() => navigate("/home")}
-              className='flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors'
+              className='flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors min-w-fit'
             >
-              <ArrowLeft className='w-5 h-5' />
-              <span>Back to Communities</span>
+              <ArrowLeft className='w-5 h-5 flex-shrink-0' />
+              <span className='hidden sm:inline'>Back to Communities</span>
+              <span className='inline sm:hidden'>Back</span>
             </button>
-            <div className='flex items-center space-x-3'>
-              <button className='p-2 text-gray-600 hover:text-purple-600 transition-colors'>
+            <div className='flex items-center space-x-1 sm:space-x-3'>
+              <button 
+                onClick={handleCopyLink}
+                className='p-2 text-gray-600 hover:text-purple-600 transition-colors relative'
+                title='Copy community link'
+              >
                 <Share className='w-5 h-5' />
+                {copyNotification && (
+                  <div className='absolute top-full mt-2 right-0 bg-gray-900 text-white text-xs py-1 px-2 rounded whitespace-nowrap'>
+                    Copied!
+                  </div>
+                )}
               </button>
-              <button className='p-2 text-gray-600 hover:text-red-500 transition-colors'>
-                <Heart className='w-5 h-5' />
-              </button>
+              {isJoined && community?.createdBy?.id !== user?.id && (
+                <button
+                  onClick={handleLeaveCommunity}
+                  className='px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm'
+                  title='Leave community'
+                >
+                  Leave
+                </button>
+              )}
+              {community?.createdBy?.id === user?.id && (
+                <>
+                  <button
+                    onClick={() => navigate(`/community/${id}/edit`)}
+                    className='p-2 text-gray-600 hover:text-blue-600 transition-colors'
+                    title='Edit community'
+                  >
+                    <Edit className='w-5 h-5' />
+                  </button>
+                  <button
+                    onClick={handleDeleteCommunity}
+                    className='p-2 text-gray-600 hover:text-red-600 transition-colors'
+                    title='Delete community'
+                  >
+                    <Trash className='w-5 h-5' />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
+        {error && (
+          <div className='mb-4 p-4 bg-red-50 border border-red-200 rounded-lg'>
+            <p className='text-red-700 text-sm'>{error}</p>
+          </div>
+        )}
         {/* Banner and Profile Section */}
         <div className='bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8'>
           {/* Banner */}
           <div className='relative h-64 bg-gradient-to-r from-purple-400 to-blue-400'>
-            <img
-              src={community.banner}
-              alt={community.name}
-              className='w-full h-full object-cover'
-            />
+            {community.banner ? (
+              <img
+                src={community.banner}
+                alt={community.name}
+                className='w-full h-full object-cover'
+              />
+            ) : (
+              <div className='w-full h-full flex items-center justify-center'>
+                <Image className='w-16 h-16 text-gray-300' />
+              </div>
+            )}
             <div className='absolute inset-0 bg-black/30'></div>
           </div>
 
           {/* Community Info */}
-          <div className='relative px-8 pb-8'>
-            <div className='flex flex-col md:flex-row md:items-end md:space-x-6 -mt-16 relative z-10'>
+          <div className='relative px-4 sm:px-8 pt-8 pb-8'>
+            <div className='flex flex-col md:flex-row md:items-start md:space-x-6 relative z-10'>
               {/* Profile Picture */}
-              <div className='w-32 h-32 bg-white rounded-full p-2 shadow-lg mb-4 md:mb-0'>
-                <img
-                  src={community.profilePicture}
-                  alt={community.name}
-                  className='w-full h-full rounded-full object-cover'
-                />
+              <div className='w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full p-2 shadow-lg mb-4 md:mb-0 flex-shrink-0 mx-auto md:mx-0'>
+                {community.profilePicture ? (
+                  <img
+                    src={community.profilePicture}
+                    alt={community.name}
+                    className='w-full h-full rounded-full object-cover'
+                  />
+                ) : (
+                  <div className='w-full h-full rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white text-2xl sm:text-4xl font-bold'>
+                    {community.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
               {/* Community Details */}
-              <div className='flex-1'>
+              <div className='flex-1 min-w-0 text-center md:text-left'>
                 <div className='flex flex-col md:flex-row md:items-center md:justify-between'>
                   <div>
                     <h1 className='text-3xl font-bold text-gray-900 mb-2'>
@@ -176,15 +325,17 @@ function CommunityPage({ user }) {
                       <div className='flex items-center space-x-1'>
                         <Users className='w-4 h-4' />
                         <span>
-                          {community.members.toLocaleString()} members
+                          {community.members?.length || 0} members
                         </span>
                       </div>
-                      <div className='flex items-center space-x-1'>
-                        <Star className='w-4 h-4 text-yellow-400 fill-current' />
-                        <span>
-                          {community.rating} ({community.totalReviews} reviews)
-                        </span>
-                      </div>
+                      {community.ratings > 0 && (
+                        <div className='flex items-center space-x-1'>
+                          <Star className='w-4 h-4 text-yellow-400 fill-current' />
+                          <span>
+                            {community.ratings.toFixed(1)} ({community.totalReviews || 0} reviews)
+                          </span>
+                        </div>
+                      )}
                       <span className='px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium'>
                         {community.category}
                       </span>
@@ -193,9 +344,10 @@ function CommunityPage({ user }) {
 
                   <button
                     onClick={handleJoinCommunity}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+                    disabled={isJoined}
+                    className={`w-full md:w-auto px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
                       isJoined
-                        ? "bg-green-500 text-white hover:bg-green-600"
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : "bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:shadow-lg transform hover:-translate-y-0.5"
                     }`}
                   >
@@ -204,39 +356,23 @@ function CommunityPage({ user }) {
                 </div>
 
                 {/* Tags */}
-                <div className='flex flex-wrap gap-2 mb-4'>
-                  {community.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className='px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full'
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+                {community.tags && community.tags.length > 0 && (
+                  <div className='flex flex-wrap gap-2 mb-4'>
+                    {community.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className='px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded-full'
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Description */}
                 <p className='text-gray-700 leading-relaxed mb-6'>
                   {community.description}
                 </p>
-
-                {/* Action Buttons */}
-                <div className='flex flex-wrap gap-4'>
-                  <a
-                    href={community.groupLink}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='flex items-center space-x-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors'
-                  >
-                    <MessageCircle className='w-4 h-4' />
-                    <span>Join Group Chat</span>
-                    <ExternalLink className='w-4 h-4' />
-                  </a>
-                  <div className='flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg'>
-                    <Calendar className='w-4 h-4' />
-                    <span>{community.nextHangout}</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -246,34 +382,63 @@ function CommunityPage({ user }) {
           {/* Main Content */}
           <div className='lg:col-span-2 space-y-8'>
             {/* Photo Gallery */}
-            <div className='bg-white rounded-2xl shadow-sm border border-gray-200 p-6'>
-              <div className='flex items-center justify-between mb-6'>
-                <h2 className='text-xl font-semibold text-gray-900 flex items-center'>
-                  <Image className='w-5 h-5 mr-2' />
-                  Photo Gallery
-                </h2>
-                <button className='text-purple-600 hover:text-purple-700 font-medium'>
-                  View All
-                </button>
+            {community.galleryImages && community.galleryImages.length > 0 && (
+              <div className='bg-white rounded-2xl shadow-sm border border-gray-200 p-6'>
+                <div className='flex items-center justify-between mb-6'>
+                  <h2 className='text-xl font-semibold text-gray-900 flex items-center'>
+                    <Image className='w-5 h-5 mr-2' />
+                    Photo Gallery
+                  </h2>
+                </div>
+                <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+                  {community.galleryImages.map((image, index) => (
+                    <div
+                      key={index}
+                      className='aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity cursor-pointer'
+                    >
+                      {image ? (
+                        <img
+                          src={image}
+                          alt={`Gallery ${index + 1}`}
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div className='w-full h-full bg-gray-200 flex items-center justify-center'>
+                          <Image className='w-8 h-8 text-gray-400' />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                {galleryImages.map((image, index) => (
-                  <div
-                    key={index}
-                    className='aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity cursor-pointer'
-                  >
-                    <img
-                      src={image}
-                      alt={`Gallery ${index + 1}`}
-                      className='w-full h-full object-cover'
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Reviews Section */}
             <div className='bg-white rounded-2xl shadow-sm border border-gray-200 p-6'>
+              {/* WhatsApp/Group Join and Hangout Date Buttons - Above Reviews */}
+              {isJoined && (community.groupLink || community.nextHangout) && (
+                <div className='flex flex-wrap gap-4 mb-8'>
+                  {community.groupLink && (
+                    <a
+                      href={community.groupLink}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='flex items-center space-x-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors'
+                    >
+                      <MessageCircle className='w-4 h-4' />
+                      <span>Join Group Chat</span>
+                      <ExternalLink className='w-4 h-4' />
+                    </a>
+                  )}
+                  {community.nextHangout && (
+                    <div className='flex items-center space-x-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg'>
+                      <Calendar className='w-4 h-4' />
+                      <span>Next Hangout: {new Date(community.nextHangout).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <h2 className='text-xl font-semibold text-gray-900 mb-6'>
                 Reviews & Feedback
               </h2>
@@ -316,51 +481,71 @@ function CommunityPage({ user }) {
                   </div>
                   <button
                     type='submit'
-                    className='flex items-center space-x-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors'
+                    disabled={submittingReview}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      submittingReview
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-purple-500 text-white hover:bg-purple-600'
+                    }`}
                   >
                     <Send className='w-4 h-4' />
-                    <span>Submit Review</span>
+                    <span>{submittingReview ? 'Submitting...' : 'Submit Review'}</span>
                   </button>
                 </form>
               )}
 
               {/* Reviews List */}
               <div className='space-y-6'>
-                {reviews.map((review) => (
-                  <div key={review.id} className='flex space-x-4'>
-                    <img
-                      src={review.avatar}
-                      alt={review.user}
-                      className='w-10 h-10 rounded-full object-cover'
-                    />
-                    <div className='flex-1'>
-                      <div className='flex items-center justify-between mb-2'>
-                        <div>
-                          <h4 className='font-medium text-gray-900'>
-                            {review.user}
-                          </h4>
-                          <div className='flex items-center space-x-2'>
-                            <div className='flex space-x-1'>
-                              {[...Array(review.rating)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className='w-4 h-4 text-yellow-400 fill-current'
-                                />
-                              ))}
+                {community?.reviews && community.reviews.length > 0 ? (
+                  community.reviews.map((review, index) => (
+                    <div key={review._id || index} className='flex space-x-4'>
+                      <div className='w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden'>
+                        {review.avatar ? (
+                          <img
+                            src={review.avatar}
+                            alt={review.userName}
+                            className='w-full h-full object-cover'
+                          />
+                        ) : (
+                          <div className='w-full h-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center'>
+                            {review.userName?.charAt(0).toUpperCase() || "U"}
+                          </div>
+                        )}
+                      </div>
+                      <div className='flex-1'>
+                        <div className='flex items-center justify-between mb-2'>
+                          <div>
+                            <h4 className='font-medium text-gray-900'>
+                              {review.userName || "Anonymous"}
+                            </h4>
+                            <div className='flex items-center space-x-2'>
+                              <div className='flex space-x-1'>
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${
+                                      i < review.rating
+                                        ? "text-yellow-400 fill-current"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className='text-sm text-gray-500'>
+                                {new Date(review.createdAt).toLocaleDateString()}
+                              </span>
                             </div>
-                            <span className='text-sm text-gray-500'>
-                              {review.date}
-                            </span>
                           </div>
                         </div>
-                        <button className='text-gray-400 hover:text-gray-600'>
-                          <MoreHorizontal className='w-4 h-4' />
-                        </button>
+                        <p className='text-gray-700'>{review.comment}</p>
                       </div>
-                      <p className='text-gray-700'>{review.comment}</p>
                     </div>
+                  ))
+                ) : (
+                  <div className='text-center py-8'>
+                    <p className='text-gray-500'>No reviews yet. Be the first to review!</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -376,17 +561,21 @@ function CommunityPage({ user }) {
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Total Members</span>
                   <span className='font-semibold'>
-                    {community.members.toLocaleString()}
+                    {community.members?.length || 0}
                   </span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Average Rating</span>
-                  <span className='font-semibold'>{community.rating}/5</span>
+                  <span className='font-semibold'>
+                    {community.reviews && community.reviews.length > 0
+                      ? (community.reviews.reduce((sum, review) => sum + review.rating, 0) / community.reviews.length).toFixed(1)
+                      : "N/A"}/5
+                  </span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Total Reviews</span>
                   <span className='font-semibold'>
-                    {community.totalReviews}
+                    {community.reviews?.length || 0}
                   </span>
                 </div>
                 <div className='flex justify-between'>
@@ -402,28 +591,35 @@ function CommunityPage({ user }) {
                 Similar Communities
               </h3>
               <div className='space-y-3'>
-                {[
-                  { name: "AI & Machine Learning", members: "892" },
-                  { name: "Web Development", members: "1.2K" },
-                  { name: "Startup Founders", members: "654" },
-                ].map((similar, index) => (
-                  <div
-                    key={index}
-                    className='flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer'
-                  >
-                    <div>
-                      <h4 className='font-medium text-gray-900'>
-                        {similar.name}
-                      </h4>
-                      <p className='text-sm text-gray-600'>
-                        {similar.members} members
-                      </p>
+                {similarCommunities && similarCommunities.length > 0 ? (
+                  similarCommunities.map((similar) => (
+                    <div
+                      key={similar._id}
+                      className='flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer'
+                      onClick={() => navigate(`/community/${similar._id}`)}
+                    >
+                      <div>
+                        <h4 className='font-medium text-gray-900'>
+                          {similar.name}
+                        </h4>
+                        <p className='text-sm text-gray-600'>
+                          {similar.members?.length || 0} members
+                        </p>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/community/${similar._id}`);
+                        }}
+                        className='text-purple-600 hover:text-purple-700 text-sm font-medium'
+                      >
+                        View
+                      </button>
                     </div>
-                    <button className='text-purple-600 hover:text-purple-700 text-sm font-medium'>
-                      View
-                    </button>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className='text-gray-500 text-sm'>No similar communities found</p>
+                )}
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -9,86 +9,42 @@ import {
   User,
   Settings,
 } from "lucide-react";
+import { communityAPI } from "../services/api";
 
 function HomePage({ user }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [communities, setCommunities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Dummy communities data
-  const communities = [
-    {
-      id: 1,
-      name: "Tech Enthusiasts LA",
-      description:
-        "Connect with fellow tech lovers, share projects, and attend meetups",
-      members: 1247,
-      category: "Technology",
-      image:
-        "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["Programming", "AI", "Startups"],
-      nextEvent: "Hackathon - Dec 15",
-    },
-    {
-      id: 2,
-      name: "Photography Club",
-      description: "Capture moments, share techniques, and explore LA together",
-      members: 892,
-      category: "Arts",
-      image:
-        "https://images.pexels.com/photos/1983032/pexels-photo-1983032.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["Portrait", "Street Photography", "Editing"],
-      nextEvent: "Photo Walk - Dec 12",
-    },
-    {
-      id: 3,
-      name: "Fitness Warriors",
-      description:
-        "Stay motivated, workout together, and achieve your fitness goals",
-      members: 2156,
-      category: "Fitness",
-      image:
-        "https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["Gym", "Running", "Nutrition"],
-      nextEvent: "Group Run - Dec 10",
-    },
-    {
-      id: 4,
-      name: "Book Lovers Society",
-      description:
-        "Discuss literature, share recommendations, and attend book signings",
-      members: 634,
-      category: "Literature",
-      image:
-        "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["Fiction", "Non-fiction", "Poetry"],
-      nextEvent: "Book Discussion - Dec 14",
-    },
-    {
-      id: 5,
-      name: "Gaming Squad",
-      description:
-        "From casual mobile games to competitive esports tournaments",
-      members: 1823,
-      category: "Gaming",
-      image:
-        "https://images.pexels.com/photos/3165335/pexels-photo-3165335.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["PC Gaming", "Console", "Mobile"],
-      nextEvent: "Tournament - Dec 16",
-    },
-    {
-      id: 6,
-      name: "Music Makers",
-      description:
-        "Musicians, singers, and music enthusiasts creating together",
-      members: 967,
-      category: "Music",
-      image:
-        "https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop",
-      tags: ["Indie", "Rock", "Electronic"],
-      nextEvent: "Jam Session - Dec 13",
-    },
-  ];
+  // Fetch communities on component mount or when filter changes
+  useEffect(() => {
+    fetchCommunities();
+  }, []);
+
+  const fetchCommunities = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await communityAPI.getAllCommunities();
+      
+      if (response.success) {
+        setCommunities(response.communities);
+      } else {
+        setError(response.message || "Failed to fetch communities");
+        // Set empty array to show no communities
+        setCommunities([]);
+      }
+    } catch (err) {
+      console.error("Error fetching communities:", err);
+      setError("An error occurred while fetching communities");
+      setCommunities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = [
     "all",
@@ -98,6 +54,12 @@ function HomePage({ user }) {
     "Literature",
     "Gaming",
     "Music",
+    "Sports",
+    "Food",
+    "Travel",
+    "Photography",
+    "Business",
+    "Science",
   ];
 
   const filteredCommunities = communities.filter((community) => {
@@ -188,80 +150,140 @@ function HomePage({ user }) {
         </div>
 
         {/* Communities Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {filteredCommunities.map((community) => (
-            <div
-              key={community.id}
-              onClick={() => navigate(`/community/${community.id}`)}
-              className='bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1'
-            >
-              <div className='relative'>
-                <img
-                  src={community.image}
-                  alt={community.name}
-                  className='w-full h-48 object-cover rounded-t-2xl'
-                />
-                <div className='absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-sm font-medium text-gray-700'>
-                  {community.category}
-                </div>
-              </div>
-
-              <div className='p-6'>
-                <h3 className='text-xl font-semibold text-gray-900 mb-2'>
-                  {community.name}
-                </h3>
-                <p className='text-gray-600 mb-4 line-clamp-2'>
-                  {community.description}
-                </p>
-
-                <div className='flex items-center justify-between mb-4'>
-                  <div className='flex items-center space-x-1 text-gray-500'>
-                    <Users className='w-4 h-4' />
-                    <span className='text-sm font-medium'>
-                      {community.members.toLocaleString()} members
-                    </span>
-                  </div>
-                  <div className='flex items-center space-x-1 text-purple-600'>
-                    <MapPin className='w-4 h-4' />
-                    <span className='text-sm font-medium'>
-                      {community.nextEvent}
-                    </span>
-                  </div>
-                </div>
-
-                <div className='flex flex-wrap gap-2'>
-                  {community.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className='px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full'
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredCommunities.length === 0 && (
+        {loading ? (
           <div className='text-center py-12'>
-            <div className='w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4'>
-              <Search className='w-8 h-8 text-gray-400' />
+            <div className='inline-block'>
+              <div className='w-12 h-12 border-4 border-purple-200 border-t-purple-500 rounded-full animate-spin'></div>
             </div>
-            <h3 className='text-lg font-medium text-gray-900 mb-2'>
-              No communities found
-            </h3>
-            <p className='text-gray-600 mb-4'>
-              Try adjusting your search or filters
-            </p>
+            <p className='text-gray-600 mt-4'>Loading communities...</p>
+          </div>
+        ) : error ? (
+          <div className='bg-red-50 border border-red-200 rounded-lg p-6 text-center'>
+            <p className='text-red-700 font-medium mb-4'>{error}</p>
             <button
-              onClick={() => navigate("/create-community")}
-              className='bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200'
+              onClick={fetchCommunities}
+              className='text-red-600 hover:text-red-700 font-medium'
             >
-              Create Your Own Community
+              Try Again
             </button>
           </div>
+        ) : (
+          <>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {filteredCommunities.map((community) => (
+                <div
+                  key={community._id}
+                  onClick={() => navigate(`/community/${community._id}`)}
+                  className='bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 overflow-hidden'
+                >
+                  <div className='relative h-48 bg-gradient-to-r from-purple-200 to-blue-200'>
+                    {community.banner ? (
+                      <img
+                        src={community.banner}
+                        alt={community.name}
+                        className='w-full h-full object-cover'
+                      />
+                    ) : (
+                      <div className='w-full h-full flex items-center justify-center'>
+                        <div className='text-center'>
+                          <Users className='w-12 h-12 text-gray-400 mx-auto mb-2' />
+                          <p className='text-gray-500 text-sm'>No banner</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className='absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700'>
+                      {community.category}
+                    </div>
+                  </div>
+
+                  <div className='p-6'>
+                    <div className='flex items-start gap-3 mb-3'>
+                      {community.profilePicture ? (
+                        <img
+                          src={community.profilePicture}
+                          alt={community.name}
+                          className='w-10 h-10 rounded-full object-cover flex-shrink-0'
+                        />
+                      ) : (
+                        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0'>
+                          {community.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className='flex-1'>
+                        <h3 className='text-lg font-semibold text-gray-900 line-clamp-1'>
+                          {community.name}
+                        </h3>
+                        <p className='text-xs text-gray-500'>
+                          Created by {community.createdBy?.name || 'Anonymous'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className='text-gray-600 text-sm mb-4 line-clamp-2'>
+                      {community.description}
+                    </p>
+
+                    <div className='flex items-center justify-between mb-4 text-sm'>
+                      <div className='flex items-center space-x-1 text-gray-600'>
+                        <Users className='w-4 h-4' />
+                        <span className='font-medium'>
+                          {community.members?.length || 0} members
+                        </span>
+                      </div>
+                      {community.ratings > 0 && (
+                        <div className='flex items-center space-x-1 text-yellow-500'>
+                          <span>★</span>
+                          <span className='font-medium'>
+                            {community.ratings.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {community.tags && community.tags.length > 0 && (
+                      <div className='flex flex-wrap gap-2'>
+                        {community.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className='px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full'
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {community.tags.length > 3 && (
+                          <span className='px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full'>
+                            +{community.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredCommunities.length === 0 && (
+              <div className='text-center py-12'>
+                <div className='w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4'>
+                  <Search className='w-8 h-8 text-gray-400' />
+                </div>
+                <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                  {communities.length === 0 ? 'No communities yet' : 'No communities found'}
+                </h3>
+                <p className='text-gray-600 mb-4'>
+                  {communities.length === 0 
+                    ? 'Be the first to create a community!' 
+                    : 'Try adjusting your search or filters'}
+                </p>
+                <button
+                  onClick={() => navigate("/create-community")}
+                  className='bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200'
+                >
+                  Create Your Own Community
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

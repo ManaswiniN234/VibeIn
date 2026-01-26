@@ -23,7 +23,7 @@ const Header = () => {
   ];
 
   const handleGetStarted = () => {
-    navigate('/signup');
+    navigate('/login');
   };
 
   return (

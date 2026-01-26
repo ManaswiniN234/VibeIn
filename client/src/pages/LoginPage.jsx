@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Users, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { authAPI } from '../services/api';
 
-function SignupPage({ setUser, setIsAuthenticated }) {
+function LoginPage({ setUser, setIsAuthenticated }) {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: ''
+    password: ''
   });
 
   const handleSubmit = async (e) => {
@@ -20,38 +18,21 @@ function SignupPage({ setUser, setIsAuthenticated }) {
     setError('');
     setLoading(true);
 
-    // Validate inputs
-    if (!formData.email || !formData.password || !formData.confirmPassword) {
-      setError('All fields are required');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!formData.email || !formData.password) {
+      setError('Email and password are required');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await authAPI.signup(
-        formData.email,
-        formData.password,
-        formData.confirmPassword
-      );
+      const response = await authAPI.login(formData.email, formData.password);
 
       if (response.success) {
         setUser(response.user);
         setIsAuthenticated(true);
-        navigate('/profile-setup');
+        navigate('/home');
       } else {
-        setError(response.message || 'Signup failed');
+        setError(response.message || 'Login failed');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -81,11 +62,11 @@ function SignupPage({ setUser, setIsAuthenticated }) {
               VibeIn
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Join VibeIn</h1>
-          <p className="text-gray-600">Connect with your college community</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
-        {/* Signup Form */}
+        {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -106,7 +87,7 @@ function SignupPage({ setUser, setIsAuthenticated }) {
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter your college email"
+                  placeholder="Enter your email"
                   disabled={loading}
                   required
                 />
@@ -125,7 +106,7 @@ function SignupPage({ setUser, setIsAuthenticated }) {
                   value={formData.password}
                   onChange={handleChange}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Create a password"
+                  placeholder="Enter your password"
                   disabled={loading}
                   required
                 />
@@ -140,57 +121,39 @@ function SignupPage({ setUser, setIsAuthenticated }) {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Confirm your password"
-                  disabled={loading}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  disabled={loading}
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              Don't have an account?{' '}
               <button 
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/signup')}
                 className="text-purple-600 hover:text-purple-700 font-semibold"
               >
-                Sign In
+                Sign Up
               </button>
             </p>
           </div>
         </div>
+
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mt-6 w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Home</span>
+        </button>
       </div>
     </div>
   );
 }
 
-export default SignupPage;
+export default LoginPage;
