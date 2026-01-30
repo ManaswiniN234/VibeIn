@@ -8,11 +8,25 @@ const communityRoutes = require("./src/routes/communityRoutes");
 const app = express();
 
 // CORS Configuration
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 const corsOptions = {
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  origin: function (origin, callback) {
+    // allow requests with no origin (e.g., same-origin or server-to-server requests)
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      // echo back the incoming origin so the response header exactly matches the request origin
+      return callback(null, true);
+    }
+    return callback(new Error('Origin not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
