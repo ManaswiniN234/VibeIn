@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Globe, Map, Building } from 'lucide-react';
+import { authAPI } from '../services/api';
 
 function LocationSetupPage({ setUser }) {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [locationData, setLocationData] = useState({
     country: '',
     state: '',
@@ -16,7 +19,12 @@ function LocationSetupPage({ setUser }) {
     'Canada': ['Ontario', 'Quebec', 'British Columbia', 'Alberta', 'Manitoba'],
     'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
     'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia'],
-    'India': ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat'],
+    'India': [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 
+      'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 
+      'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 
+      'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+    ],
     'Germany': ['Bavaria', 'North Rhine-Westphalia', 'Baden-Württemberg', 'Lower Saxony'],
     'France': ['Île-de-France', 'Provence-Alpes-Côte d\'Azur', 'Auvergne-Rhône-Alpes', 'Occitanie']
   };
@@ -27,13 +35,56 @@ function LocationSetupPage({ setUser }) {
     'Texas': ['Houston', 'Dallas', 'Austin', 'San Antonio', 'Fort Worth'],
     'Florida': ['Miami', 'Orlando', 'Tampa', 'Jacksonville', 'Tallahassee'],
     'Ontario': ['Toronto', 'Ottawa', 'Hamilton', 'London', 'Windsor'],
-    'England': ['London', 'Manchester', 'Birmingham', 'Liverpool', 'Leeds']
+    'England': ['London', 'Manchester', 'Birmingham', 'Liverpool', 'Leeds'],
+    'Delhi': ['New Delhi', 'Delhi', 'East Delhi', 'South Delhi', 'West Delhi'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Aurangabad', 'Nashik', 'Solapur'],
+    'Karnataka': ['Bengaluru', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Bijapur'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Trichy', 'Tirunelveli'],
+    'Telugu': ['Hyderabad', 'Vijayawada', 'Visakhapatnam', 'Guntur', 'Nellore'],
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Nellore', 'Guntur', 'Tirupati'],
+    'Telangana': ['Hyderabad', 'Secunderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar', 'Jamnagar'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Bikaner', 'Ajmer'],
+    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Meerut', 'Allahabad'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Darjeeling', 'Siliguri', 'Asansol'],
+    'Punjab': ['Chandigarh', 'Amritsar', 'Ludhiana', 'Jalandhar', 'Patiala'],
+    'Haryana': ['Faridabad', 'Gurgaon', 'Hisar', 'Panipat', 'Rohtak'],
+    'Madhya Pradesh': ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain'],
+    'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Kottayam', 'Malappuram'],
+    'Assam': ['Guwahati', 'Dispur', 'Silchar', 'Dibrugarh', 'Nagaon'],
+    'Jharkhand': ['Ranchi', 'Dhanbad', 'Giridih', 'Jamshedpur', 'Hazaribagh'],
+    'Goa': ['Panaji', 'Vasco da Gama', 'Margao', 'Ponda', 'Bicholim'],
+    'Uttarakhand': ['Dehradun', 'Nainital', 'Haldwani', 'Rishikesh', 'Almora'],
+    'Himachal Pradesh': ['Shimla', 'Mandi', 'Solan', 'Kangra', 'Kullu'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur']
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setUser(prev => ({ ...prev, location: locationData }));
-    navigate('/home');
+    setError('');
+    setLoading(true);
+
+    if (!locationData.country || !locationData.state || !locationData.city) {
+      setError('All location fields are required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await authAPI.updateLocation(locationData);
+
+      if (response.success) {
+        setUser(response.user);
+        navigate('/home');
+      } else {
+        setError(response.message || 'Failed to update location');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -59,6 +110,12 @@ function LocationSetupPage({ setUser }) {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Country */}
             <div>
@@ -71,6 +128,7 @@ function LocationSetupPage({ setUser }) {
                 value={locationData.country}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                disabled={loading}
                 required
               >
                 <option value="">Select your country</option>
@@ -91,7 +149,7 @@ function LocationSetupPage({ setUser }) {
                 value={locationData.state}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={!locationData.country}
+                disabled={!locationData.country || loading}
                 required
               >
                 <option value="">Select your state</option>
@@ -112,7 +170,7 @@ function LocationSetupPage({ setUser }) {
                 value={locationData.city}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={!locationData.state}
+                disabled={!locationData.state || loading}
                 required
               >
                 <option value="">Select your city</option>
@@ -124,9 +182,10 @@ function LocationSetupPage({ setUser }) {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Explore Communities
+              {loading ? 'Setting Location...' : 'Explore Communities'}
             </button>
           </form>
         </div>
