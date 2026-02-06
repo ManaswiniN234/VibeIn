@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping Render Backend
         run: |
-          curl -f https://your-backend-url.onrender.com/health || echo "Ping failed"
+          curl -f https://vibein-backend.onrender.com/api/health || echo "Ping failed"
         
       - name: Log Status
         run: echo "Pinged backend at $(date)"
